@@ -26,7 +26,7 @@ An interactive team-based quiz game that generates questions using various Large
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/AI-ML_Quiz.git
+git clone https://github.com/arindamb69/AI-ML_Quiz.git
 cd AI-ML_Quiz
 ```
 
