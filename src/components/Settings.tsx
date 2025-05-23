@@ -67,10 +67,15 @@ const Settings = () => {
                   onChange={(e) => dispatch(setProvider(e.target.value as any))}
                   className="w-full p-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
                 >
-                  <option value="ollama">Ollama (Local)</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="gemini">Gemini</option>
-                  <option value="groq">Groq</option>
+                  {PROVIDERS.map(provider => (
+                    <option 
+                      key={provider.value} 
+                      value={provider.value}
+                      className="bg-indigo-900 text-white"
+                    >
+                      {provider.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -89,9 +94,13 @@ const Settings = () => {
                       onChange={(e) => dispatch(setOllamaModel(e.target.value))}
                       className="w-full p-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
                     >
-                      <option value="">Select a model</option>
+                      <option value="" className="bg-indigo-900 text-white">Select a model</option>
                       {ollamaModels.map((model) => (
-                        <option key={model} value={model}>
+                        <option 
+                          key={model} 
+                          value={model}
+                          className="bg-indigo-900 text-white"
+                        >
                           {model}
                         </option>
                       ))}

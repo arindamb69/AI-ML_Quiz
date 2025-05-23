@@ -9,7 +9,9 @@ const Results = () => {
   const teams = useSelector((state: RootState) => state.game.teams);
 
   const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
-  const winner = sortedTeams[0];
+  const highestScore = sortedTeams[0]?.score;
+  const winners = sortedTeams.filter(team => team.score === highestScore);
+  const isTie = winners.length === teams.length;
 
   const handleNewGame = () => {
     dispatch(resetGame());
@@ -17,45 +19,56 @@ const Results = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-semibold mb-4">Game Results</h2>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto bg-white/10 backdrop-blur-lg rounded-lg shadow-xl p-6 border border-white/20">
+          <h2 className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+            Game Results
+          </h2>
 
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold mb-2">Final Scores</h3>
-          <div className="space-y-2">
-            {sortedTeams.map((team, index) => (
-              <div
-                key={team.id}
-                className={`p-3 rounded-lg ${
-                  index === 0 ? 'bg-yellow-100 border-2 border-yellow-500' : 'bg-gray-50'
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{team.name}</span>
-                  <span className="text-lg font-bold">{team.score} points</span>
-                </div>
-                {index === 0 && (
-                  <div className="text-yellow-600 font-medium mt-1">🏆 Winner!</div>
-                )}
-              </div>
-            ))}
+          <div className="mb-8">
+            <h3 className="text-2xl font-semibold mb-4 text-white">Final Scores</h3>
+            <div className="space-y-4">
+              {sortedTeams.map((team, index) => {
+                const isWinner = team.score === highestScore;
+                return (
+                  <div
+                    key={team.id}
+                    className={`p-4 rounded-lg backdrop-blur-sm transition-all duration-200 ${
+                      isWinner 
+                        ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-2 border-yellow-500/50' 
+                        : 'bg-white/5 border border-white/10'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-xl font-medium text-white">{team.name}</span>
+                      <span className="text-2xl font-bold text-purple-300">{team.score} points</span>
+                    </div>
+                    {isWinner && (
+                      <div className="text-yellow-300 font-medium mt-2">
+                        {isTie ? '🏆 Tie!' : '🏆 Winner!'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <div className="flex gap-4">
-          <button
-            onClick={handleNewGame}
-            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-          >
-            New Game
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-          >
-            Settings
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={handleNewGame}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200 font-semibold"
+            >
+              New Game
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transform hover:scale-105 transition-all duration-200 font-semibold"
+            >
+              Settings
+            </button>
+          </div>
         </div>
       </div>
     </div>
