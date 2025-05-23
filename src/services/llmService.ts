@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { RootState } from '../store';
 import { LLMProvider } from '../store/settingsSlice';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface Question {
   id: string;
@@ -11,7 +12,14 @@ interface Question {
 }
 
 const SYSTEM_PROMPT = `You are a quiz question generator for AI and Machine Learning topics.
-Generate a multiple-choice question with exactly 4 options.
+Generate a multiple-choice question with exactly 4 options. You should generate a question that is relevant to the topic of AI and Machine Learning.
+
+IMPORTANT RULES:
+1. DO NOT generate questions that are similar to previously asked questions
+2. Each question must be unique in both content and structure
+3. Avoid variations of the same question (e.g., don't just change the options)
+4. Ensure questions cover different aspects of AI and ML topics
+
 Format the response as a valid JSON object with the following structure:
 {
   "text": "question text",
@@ -19,6 +27,9 @@ Format the response as a valid JSON object with the following structure:
   "correctAnswer": "correct option"
 }
 Make sure the response is ONLY the JSON object, with no additional text.`;
+
+// Add question history tracking
+const recentQuestions = new Set<string>();
 
 export const generateQuestion = async (
   settings: RootState['settings'],
@@ -167,16 +178,116 @@ const generateGeminiQuestion = async (
   apiKey: string,
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question> => {
-  // TODO: Implement Gemini API integration
-  throw new Error('Gemini integration not implemented yet');
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    // Add recent questions to the prompt to help prevent repetition
+    const recentQuestionsText = recentQuestions.size > 0 
+      ? `\nRecently asked questions (DO NOT generate similar ones):\n${Array.from(recentQuestions).slice(-5).join('\n')}`
+      : '';
+
+    const prompt = `${SYSTEM_PROMPT}${recentQuestionsText}\n\nGenerate a ${difficulty} difficulty question.`;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    console.log('Raw Gemini response:', text);
+
+    try {
+      const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
+      const questionData = JSON.parse(cleanedText);
+      validateQuestionData(questionData);
+      
+      // Add the new question to history
+      if (questionData.text) {
+        recentQuestions.add(questionData.text);
+        // Keep only last 20 questions in history
+        if (recentQuestions.size > 20) {
+          const firstQuestion = Array.from(recentQuestions)[0];
+          recentQuestions.delete(firstQuestion);
+        }
+      }
+      
+      return {
+        id: Date.now().toString(),
+        text: questionData.text,
+        options: questionData.options,
+        correctAnswer: questionData.correctAnswer,
+        difficulty,
+      };
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response:', text);
+      console.error('Parse error details:', parseError);
+      throw new Error(`Invalid response format from Gemini. Raw response: ${text.substring(0, 200)}...`);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        throw new Error('Invalid Gemini API key');
+      }
+      throw new Error(`Gemini API error: ${error.message}`);
+    }
+    throw error;
+  }
 };
 
 const generateGroqQuestion = async (
   apiKey: string,
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question> => {
-  // TODO: Implement Groq API integration
-  throw new Error('Groq integration not implemented yet');
+  try {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: `Generate a ${difficulty} difficulty question.`,
+          },
+        ],
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.data.choices?.[0]?.message?.content) {
+      throw new Error('No response from Groq');
+    }
+
+    try {
+      const questionData = JSON.parse(response.data.choices[0].message.content);
+      validateQuestionData(questionData);
+      
+      return {
+        id: Date.now().toString(),
+        text: questionData.text,
+        options: questionData.options,
+        correctAnswer: questionData.correctAnswer,
+        difficulty,
+      };
+    } catch (parseError) {
+      console.error('Failed to parse Groq response:', response.data.choices[0].message.content);
+      throw new Error('Invalid response format from Groq');
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        throw new Error('Invalid Groq API key');
+      }
+      throw new Error(`Groq API error: ${error.message}`);
+    }
+    throw error;
+  }
 };
 
 const validateQuestionData = (data: any): void => {

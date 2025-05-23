@@ -1,13 +1,20 @@
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../store';
+import { resetGame } from '../store/gameSlice';
 
 const Results = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const teams = useSelector((state: RootState) => state.game.teams);
 
   const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
   const winner = sortedTeams[0];
+
+  const handleNewGame = () => {
+    dispatch(resetGame());
+    navigate('/');
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -38,7 +45,7 @@ const Results = () => {
 
         <div className="flex gap-4">
           <button
-            onClick={() => navigate('/')}
+            onClick={handleNewGame}
             className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             New Game
