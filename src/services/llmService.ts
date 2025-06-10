@@ -12,13 +12,15 @@ interface Question {
 }
 
 const SYSTEM_PROMPT = `You are a quiz question generator for AI and Machine Learning topics.
-Generate a multiple-choice question with exactly 4 options. You should generate a question that is relevant to the topic of AI and Machine Learning.
+Generate a multiple-choice question with exactly 4 options. Alternate questions so that topics about Machine Learning and Artificial Intelligence are covered equally over time.
 
 IMPORTANT RULES:
-1. DO NOT generate questions that are similar to previously asked questions
-2. Each question must be unique in both content and structure
-3. Avoid variations of the same question (e.g., don't just change the options)
-4. Ensure questions cover different aspects of AI and ML topics
+1. NEVER repeat any question, even if it was asked in a previous session or to a different user.
+2. Alternate between Machine Learning and Artificial Intelligence topics to ensure equal coverage.
+3. Each question must be unique in both content and structure.
+4. Avoid variations of the same question (e.g., don't just change the options).
+5. The question text should be clear and concise.
+6. Options should be plausible and relevant to the question.
 
 Format the response as a valid JSON object with the following structure:
 {
@@ -300,4 +302,4 @@ const validateQuestionData = (data: any): void => {
   if (!data.correctAnswer || !data.options.includes(data.correctAnswer)) {
     throw new Error('Correct answer must be one of the options');
   }
-}; 
+};
