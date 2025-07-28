@@ -15,12 +15,18 @@ const SYSTEM_PROMPT = `You are a quiz question generator for AI and Machine Lear
 Generate a multiple-choice question with exactly 4 options. Alternate questions so that topics about Machine Learning and Artificial Intelligence are covered equally over time.
 
 IMPORTANT RULES:
-1. NEVER repeat any question, even if it was asked in a previous session or to a different user.
+1. NEVER repeat any question, create usnique questions each time.
 2. Alternate between Machine Learning and Artificial Intelligence topics to ensure equal coverage.
 3. Each question must be unique in both content and structure.
 4. Avoid variations of the same question (e.g., don't just change the options).
 5. The question text should be clear and concise.
 6. Options should be plausible and relevant to the question.
+7. The correct answer must be one of the options provided.
+8. Ensure the question is appropriate for the specified difficulty level (easy, medium, hard).
+9. Do not include any personal or sensitive information in the questions.
+10. The easy questions should not be as easy as "What is AI?" but rather something like "What is a common application of AI in everyday life?".
+11. The medium questions should not be too complex, like "Explain the difference between supervised and unsupervised learning", but rather something like "What is a common algorithm used in supervised learning?".
+12. The hard questions should not be overly technical, like "What is the mathematical basis of backpropagation?", but rather something like "What is a common challenge faced when training deep neural networks?".
 
 Format the response as a valid JSON object with the following structure:
 {
@@ -32,6 +38,11 @@ Make sure the response is ONLY the JSON object, with no additional text.`;
 
 // Add question history tracking
 const recentQuestions = new Set<string>();
+
+const getRecentQuestionsText = () =>
+  recentQuestions.size > 0
+    ? `\nRecently asked questions (DO NOT generate similar ones):\n${Array.from(recentQuestions).slice(-5).join('\n')}`
+    : '';
 
 export const generateQuestion = async (
   settings: RootState['settings'],
@@ -82,6 +93,7 @@ const generateOllamaQuestion = async (
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question> => {
   try {
+    const prompt = `${SYSTEM_PROMPT}${getRecentQuestionsText()}\n\nGenerate a ${difficulty} difficulty question.`;
     const response = await axios.post('http://localhost:11434/api/generate', {
       model,
       prompt: `${SYSTEM_PROMPT}\n\nGenerate a ${difficulty} difficulty question.`,
@@ -95,6 +107,15 @@ const generateOllamaQuestion = async (
     try {
       const questionData = JSON.parse(response.data.response);
       validateQuestionData(questionData);
+
+      // Add the new question to history
+      if (questionData.text) {
+        recentQuestions.add(questionData.text);
+        if (recentQuestions.size > 20) {
+          const firstQuestion = Array.from(recentQuestions)[0];
+          recentQuestions.delete(firstQuestion);
+        }
+      }
       
       return {
         id: Date.now().toString(),
@@ -123,6 +144,7 @@ const generateOpenAIQuestion = async (
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question> => {
   try {
+    const recentQuestionsText = getRecentQuestionsText();
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -134,7 +156,7 @@ const generateOpenAIQuestion = async (
           },
           {
             role: 'user',
-            content: `Generate a ${difficulty} difficulty question.`,
+            content: `Generate a ${difficulty} difficulty question.${recentQuestionsText}`,
           },
         ],
       },
@@ -153,6 +175,15 @@ const generateOpenAIQuestion = async (
     try {
       const questionData = JSON.parse(response.data.choices[0].message.content);
       validateQuestionData(questionData);
+
+      // Add the new question to history
+      if (questionData.text) {
+        recentQuestions.add(questionData.text);
+        if (recentQuestions.size > 20) {
+          const firstQuestion = Array.from(recentQuestions)[0];
+          recentQuestions.delete(firstQuestion);
+        }
+      }
       
       return {
         id: Date.now().toString(),
@@ -182,7 +213,7 @@ const generateGeminiQuestion = async (
 ): Promise<Question> => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Add recent questions to the prompt to help prevent repetition
     const recentQuestionsText = recentQuestions.size > 0 
@@ -239,6 +270,7 @@ const generateGroqQuestion = async (
   difficulty: 'easy' | 'medium' | 'hard'
 ): Promise<Question> => {
   try {
+    const recentQuestionsText = getRecentQuestionsText();
     const response = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -250,7 +282,8 @@ const generateGroqQuestion = async (
           },
           {
             role: 'user',
-            content: `Generate a ${difficulty} difficulty question.`,
+            content: `Generate a ${difficulty} difficulty question.${recentQuestionsText}`,
+
           },
         ],
       },
@@ -269,6 +302,15 @@ const generateGroqQuestion = async (
     try {
       const questionData = JSON.parse(response.data.choices[0].message.content);
       validateQuestionData(questionData);
+
+      // Add the new question to history
+      if (questionData.text) {
+        recentQuestions.add(questionData.text);
+        if (recentQuestions.size > 20) {
+          const firstQuestion = Array.from(recentQuestions)[0];
+          recentQuestions.delete(firstQuestion);
+        }
+      }
       
       return {
         id: Date.now().toString(),
