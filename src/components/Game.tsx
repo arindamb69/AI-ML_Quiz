@@ -236,11 +236,8 @@ const Game = () => {
                   }}
                 >
                   <div className="font-medium text-lg text-white">{option.description}</div>
-                  {option.level === 'hard' && (
-                    <div className="text-sm text-gray-300 mt-1">
-                      Recommended for bonus questions
-                    </div>
-                  )}
+                  {option.level === 'hard'
+                  }
                 </button>
               ))}
             </div>
